@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# This script has to run as root.
+# For each video device, take a picture and call it "image"<device number"."jpg"
+for vid in /dev/video*
+do
+    fswebcam -D ${vid} image${vid#/dev/video}.jpg
+done
