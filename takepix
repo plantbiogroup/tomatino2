@@ -2,7 +2,27 @@
 
 # This script has to run as root.
 # For each video device, take a picture and call it "image"<device number"."jpg"
-for vid in /dev/video*
-do
-    fswebcam -D ${vid} image${vid#/dev/video}.jpg
-done
+
+source ~/awskeys
+
+D=`date +"%Y%m%d%H%M"`
+file=${D}.jpg
+filepath=/tmp/${file}
+bucket="www.plantbio.org"
+resource="/${bucket}/cam/${file}"
+contentType="image/jpeg"
+dateValue=`date -R`
+stringToSign="PUT\n\n${contentType}\n${dateValue}\n${resource}"
+signature=`echo -en ${stringToSign} | openssl sha1 -hmac ${s3Secret} -binary | base64`
+
+raspistill -o ${filepath}
+curl -k \
+     --silent \
+     -X PUT -T "${filepath}" \
+     -H "Host: ${bucket}.s3.amazonaws.com" \
+     -H "Date: ${dateValue}" \
+     -H "Content-Type: ${contentType}" \
+     -H "Authorization: AWS ${s3Key}:${signature}" \
+     https://${bucket}.s3.amazonaws.com/cam/${file}
+
+rm -f ${filepath}
