@@ -1,5 +1,5 @@
 BINS=/usr/local/bin/takepix \
-     /usr/local/bin/takepixpart
+     /etc/cron.d/takepixpart
 
 install: $(BINS)
 
