@@ -13,7 +13,7 @@ dateValue=`date -R`
 stringToSign="PUT\n\n${contentType}\n${dateValue}\n${resource}"
 signature=`echo -en ${stringToSign} | openssl sha1 -hmac ${s3Secret} -binary | base64`
 
-for i in {0..20}
+for i in {0..59}
 do
     DATE=`date --date="+${i} minutes" +"%Y%m%d%H%M"`
     TEMP="$((RANDOM % 5 + 25)).$((RANDOM % 10))"
