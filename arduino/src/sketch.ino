@@ -1,136 +1,75 @@
 /* -*- mode: c -*- */
-/* #include "DHT.h" */
-
-#define RELAYS 8
-#define DELAY 2000
-#define ANALOG_PINS 6
-#define DIGITAL_PINS 4
-#define DHTTYPE DHT21   	/* DHT 21 (AM2301) */
-#define RESTTIME 1000 * 60 	/* Time between dutycycle ms */
-#define RELAYRESTTIME 1000	/* ms */
-
-struct context {
-  int analogsensorvalue[ANALOG_PINS];
-  float humidity[DIGITAL_PINS];
-  float temperature[DIGITAL_PINS];
-  DHT *dht[DIGITAL_PINS];	/* Think about this one.... */
-  int relay[RELAYS];
-};
-
-static struct context  ctx;
-
-/******************************************
- ** Relay section
- ******************************************/
-/* 3 is not working on test setup */
-int relaymap[RELAYS]={2, 3, 4, 5, 6, 7, 8, 9};
-
-void setrelay(int r, int val)
-{
-  if(val) digitalWrite(relaymap[r], LOW);
-  else digitalWrite(relaymap[r], HIGH);
-}
-/******************************************
- ** Serial section
- ******************************************/
-int readline(int readch, char *buffer, int len)
-{
-  static int pos = 0;
-  int rpos;
-
-  if (readch > 0) {
-    switch (readch) {
-      case '\n': // Ignore new-lines
-        break;
-      case '\r': // Return on CR
-        rpos = pos;
-        pos = 0;  // Reset position index ready for next time
-        return rpos;
-      default:
-        if (pos < len-1) {
-          buffer[pos++] = readch;
-          buffer[pos] = 0;
-        }
-    }
-  }
-  // No end of line has been found, so return -1.
-  return -1;
-}
+// Example testing sketch for various DHT humidity/temperature sensors
+// Written by ladyada, public domain
 
 
-/******************************************
- ** MAIN section
- ******************************************/
-void setup()
-{
-  int i;
-  /* Set up the UART */
+#include "DHT.h"
+
+#define DHTPIN 12     // what digital pin we're connected to
+
+// Uncomment whatever type you're using!
+//#define DHTTYPE DHT11   // DHT 11
+#define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
+//#define DHTTYPE DHT21   // DHT 21 (AM2301)
+
+// Connect pin 1 (on the left) of the sensor to +5V
+// NOTE: If using a board with 3.3V logic like an Arduino Due connect pin 1
+// to 3.3V instead of 5V!
+// Connect pin 2 of the sensor to whatever your DHTPIN is
+// Connect pin 4 (on the right) of the sensor to GROUND
+// Connect a 10K resistor from pin 2 (data) to pin 1 (power) of the sensor
+
+// Initialize DHT sensor.
+// Note that older versions of this library took an optional third parameter to
+// tweak the timings for faster processors.  This parameter is no longer needed
+// as the current DHT reading algorithm adjusts itself to work on faster procs.
+DHT dht(DHTPIN, DHTTYPE);
+
+void setup() {
+  dht.begin();
+
   Serial.begin(9600);
-
-  /* Set up the relay pins */
-  for(i=0; i<RELAYS; i++) {
-    pinMode(ctx.relay[i], OUTPUT);
-    setrelay(i, 0);
-  }
-
-  /* Set up the CO2 reader */
-
-  /* Set up the AM3202 */
-
-  /* Think about this one.... */
-#define DHTPIN 2     // what pin we're connected to
-  for(i=i; i<DIGITAL_PINS; i++) {
-    ctx.dht[i] = new DHT(DHTPIN, DHTTYPE);
-    ctx.dht[i]->begin();
-  }
 }
 
-void loop()
-{
-  static char buffer[80];
-  int i;
+void loop() {
+  int co20;
+  int co21;
+  int co22;
+  float h;
+  float t;
+  
+  // Wait a few seconds between measurements.
+  delay(1000);
 
-  delay(RESTTIME);
-  /* Read the UART */
-  if (readline(Serial.read(), buffer, 80) > 0) {
-    Serial.print("You entered: >");
-    Serial.print(buffer);
-    Serial.println("<");
+  /* Read the gas pin. */
+  co20 = analogRead(0);
+  /* Read the gas pin. */
+  delay(1000); 
+  co21 = analogRead(1);
+  /* Read the gas pin. */
+  delay(1000); 
+  co22 = analogRead(2);
+  // Reading temperature or humidity takes about 250 milliseconds!
+  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+  delay(2000);
+  h = dht.readHumidity();
+  // Read temperature as Celsius (the default)
+  t = dht.readTemperature();
+
+  // Check if any reads failed and exit early (to try again).
+  if (isnan(h) || isnan(t)) {
+    Serial.println("Failed to read from DHT sensor!");
+    return;
   }
 
-  /*** Read all the analog pins ***/
-  for(i=0; i<ANALOG_PINS; i++) {
-    ctx.analogsensorvalue[i] = analogRead(i + A0);
-  }
-
-  /* Read humidity and temperature */         /* See ~/ws/plantbiogroup/tomatino/etc/DHT/examples/DHTtester/ */
-  for(i=0; i<DIGITAL_PINS; i++) {
-    delay(2000);		/* Wait between measurements */
-    ctx.humidity[i] = ctx.dht[i]->readHumidity();
-    ctx.temperature[i] = ctx.dht[i]->readTemperature();
-  }
-
-  /*** Set all the realys ***/
-  for(i=0; i<RELAYS; i++) {
-    delay(RELAYRESTTIME);
-    setrelay(i, ctx.relay[i]);
-  }
-
-  /*** Report the values ***/
-  for(i=0; i<ANALOG_PINS; i++) {
-    printf("A%d %d\n", i, ctx.analogsensorvalue[i]);
-  }
-  for(i=0; i<DIGITAL_PINS; i++) {
-    if (!isnan(ctx.humidity[i]) ) {
-      printf("H%d %f\n", i, ctx.humidity[i]);
-    }
-  }
-  for(i=0; i<DIGITAL_PINS; i++) {
-    if (!isnan(ctx.temperature[i]) ) {
-      printf("T%d %f\n", i, ctx.temperature[i]);
-    }
-  }
-  for(i=0; i<RELAYS; i++) {
-    printf("R%d %d\n", i, ctx.relay[i]);
-  }
+  Serial.print("T");
+  Serial.println(t);
+  Serial.print("H");
+  Serial.println(h);
+  Serial.print("C0");
+  Serial.println(co20);
+  Serial.print("C1");
+  Serial.println(co21);
+  Serial.print("C2");
+  Serial.println(co22);
 }

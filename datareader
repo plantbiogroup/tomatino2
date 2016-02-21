@@ -1,0 +1,29 @@
+#!/usr/bin/python
+import serial
+import datetime
+
+temperature = 0
+humidity = 0
+co20 = 0
+co21 = 0
+co22 = 0
+
+ser=serial.Serial('/dev/ttyUSB0', 9600)
+while True:
+      timestamp=datetime.datetime.now().strftime('%Y%m%d%H%M')
+      # make four reads and then dump them.
+      for count in [1,2,3,4]:
+            data = ser.readline()
+            if data.startswith('H'):
+                  humidity = data[1:].strip()
+            if data.startswith('T'):
+                  temperature = data[1:].strip()
+            if data.startswith('C0'):
+                  co20 = data[2:].strip()
+            if data.startswith('C1'):
+                  co21 = data[2:].strip()
+            if data.startswith('C2'):
+                  co22 = data[2:].strip()
+      s = "%s,%s,%s,%s\n" % (timestamp, temperature, humidity, co21)
+      with open('/tmp/data.csv', 'a') as f:
+            f.write( s )

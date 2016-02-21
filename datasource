@@ -6,21 +6,16 @@ source ~/awskeys
 D=`date +"%Y%m%d%H%M"`
 file=${D}.csv
 filepath=/tmp/${file}
+
+cp /tmp/data.csv ${filepath}
+rm /tmp/data.csv
+
 bucket="www.plantbio.org"
 resource="/${bucket}/data/${file}"
 contentType="text/csv"
 dateValue=`date -R`
 stringToSign="PUT\n\n${contentType}\n${dateValue}\n${resource}"
 signature=`echo -en ${stringToSign} | openssl sha1 -hmac ${s3Secret} -binary | base64`
-
-for i in {0..59}
-do
-    DATE=`date --date="+${i} minutes" +"%Y%m%d%H%M"`
-    TEMP="$((RANDOM % 5 + 25)).$((RANDOM % 10))"
-    HUMIDITY="$((RANDOM % 10 + 50))"
-    CO2="$((RANDOM % 100 + 500))"
-    echo "\"$DATE\",$TEMP,$HUMIDITY,$CO2" >> ${filepath}
-done
 
 curl -k \
      --silent \
