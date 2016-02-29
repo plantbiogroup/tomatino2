@@ -1,8 +1,6 @@
 /* -*- mode: c -*- */
 // Example testing sketch for various DHT humidity/temperature sensors
 // Written by ladyada, public domain
-
-
 #include "DHT.h"
 
 #define DHTPIN 12     // what digital pin we're connected to
@@ -24,90 +22,94 @@
 // tweak the timings for faster processors.  This parameter is no longer needed
 // as the current DHT reading algorithm adjusts itself to work on faster procs.
 DHT dht(DHTPIN, DHTTYPE);
+static int pos = 0;
+static char buffer[80];
 
 /******************************************
  ** Serial section
  ******************************************/
-static int pos = 0;
 int readline(int readch, char *buffer, int len)
 {
   int rpos;
 
   if (readch > 0) {
     switch (readch) {
-      case '\n': // Any newline convention will return.
-      case '\r': // Even CR.
+      case '\n': // Newline convention.
         rpos = pos;
         pos = 0;  // Reset position index ready for next time
         return rpos;
       default:
-        if (pos < len-1) {
-          buffer[pos++] = readch;
-          buffer[pos] = 0;
-        }
+	if( readch >= ' ' )	/* is Printable ? */
+	  {
+	    if (pos < len-1) {
+	      buffer[pos++] = readch;
+	      buffer[pos] = 0;
+	    }
+	  }
     }
   }
   // No end of line has been found, so return -1.
   return -1;
 }
 
-void prout(char *tag, int value)
+void prout_int(char *tag, int value)
 {
   Serial.print(tag);
   Serial.println(value);
   Serial.flush();
 }
 
+void prout_float(char *tag, float value)
+{
+  Serial.print(tag);
+  if ( isnan(value) ) {
+    value = 0.0;
+  }
+  Serial.println(value);
+  Serial.flush();
+}
+
 void setup() {
   dht.begin();
-
   Serial.begin(9600);
 }
 
 void measure()
 {
-  int co20;
-  int co21;
-  int co22;
-  float h;
-  float t;
+  prout_int( "C0", analogRead(0) );
+  prout_int( "C1", analogRead(1) );
+  prout_int( "C2", analogRead(2) );
+  prout_float( "H", dht.readHumidity() );
+  prout_float( "T", dht.readTemperature() );
 
-  /* Read the gas pin. */
-  co20 = analogRead(0);
-  /* Read the gas pin. */
-  /* delay(1000);  */
-  co21 = analogRead(1);
-  /* Read the gas pin. */
-  /* delay(1000);  */
-  co22 = analogRead(2);
-  // Reading temperature or humidity takes about 250 milliseconds!
-  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-  h = dht.readHumidity();
-  // Read temperature as Celsius (the default)
-  t = dht.readTemperature();
-
-  // Check if any reads failed and exit early (to try again).
-  if ( ! isnan(t) ) {
-    prout("T",t);
-  }
-
-  if ( ! isnan(h) ) {
-    prout("H", h);
-  }
-
-  prout("C0", co20);
-  prout("C1", co21);
-  prout("C2", co22);
 }
 
-static char buffer[80];
-
 void decode(char *buf) {
+  while( *buf ) {
+    if ( *buf >= 'a' && *buf <= 'h' ) {
+      relay( *buf - 'a', 0);	/* Relay off */
+    }
+    else if ( *buf >= 'A' && *buf <= 'H' ) {
+      relay( *buf - 'H', 1);	/* Relay on */
+    }
+    else if ( *buf == '*' ) {
+      measure();
+    }
+    else if ( *buf == '@' ) {
+      Serial.println("v0.1");
+    }
+    else if ( *buf == '?' ) {
+      Serial.println("a..h, realy off");
+      Serial.println("A..H, realy on");
+      Serial.println("*     return measurements");
+      Serial.println("*       T for temp, H for humidity, C for CO2");
+    }
+    buf++;
+  }
 }
 
 void loop() {
   if (readline(Serial.read(), buffer, 80) > 0) {
     decode(buffer);
-    measure();
   }
 }
