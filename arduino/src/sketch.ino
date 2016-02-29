@@ -28,16 +28,15 @@ DHT dht(DHTPIN, DHTTYPE);
 /******************************************
  ** Serial section
  ******************************************/
+static int pos = 0;
 int readline(int readch, char *buffer, int len)
 {
-  static int pos = 0;
   int rpos;
 
   if (readch > 0) {
     switch (readch) {
-      case '\n': // Ignore new-lines
-        break;
-      case '\r': // Return on CR
+      case '\n': // Any newline convention will return.
+      case '\r': // Even CR.
         rpos = pos;
         pos = 0;  // Reset position index ready for next time
         return rpos;
@@ -52,60 +51,63 @@ int readline(int readch, char *buffer, int len)
   return -1;
 }
 
+void prout(char *tag, int value)
+{
+  Serial.print(tag);
+  Serial.println(value);
+  Serial.flush();
+}
+
 void setup() {
   dht.begin();
 
   Serial.begin(9600);
 }
 
-void loop() {
+void measure()
+{
   int co20;
   int co21;
   int co22;
   float h;
   float t;
-  static char buffer[80];
-  
-  // Wait a few seconds between measurements.
-  delay(1000);
-
-  if (Serial.available() > 0) {
-    if (readline(Serial.read(), buffer, 80) > 0) {
-      Serial.print("You entered: >");
-      Serial.print(buffer);
-      Serial.println("<");
-    }
-  }
 
   /* Read the gas pin. */
   co20 = analogRead(0);
   /* Read the gas pin. */
-  delay(1000); 
+  /* delay(1000);  */
   co21 = analogRead(1);
   /* Read the gas pin. */
-  delay(1000); 
+  /* delay(1000);  */
   co22 = analogRead(2);
   // Reading temperature or humidity takes about 250 milliseconds!
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-  delay(2000);
   h = dht.readHumidity();
   // Read temperature as Celsius (the default)
   t = dht.readTemperature();
 
   // Check if any reads failed and exit early (to try again).
-  if (isnan(h) || isnan(t)) {
-    Serial.println("Failed to read from DHT sensor!");
-    return;
+  if ( ! isnan(t) ) {
+    prout("T",t);
   }
 
-  Serial.print("T");
-  Serial.println(t);
-  Serial.print("H");
-  Serial.println(h);
-  Serial.print("C0");
-  Serial.println(co20);
-  Serial.print("C1");
-  Serial.println(co21);
-  Serial.print("C2");
-  Serial.println(co22);
+  if ( ! isnan(h) ) {
+    prout("H", h);
+  }
+
+  prout("C0", co20);
+  prout("C1", co21);
+  prout("C2", co22);
+}
+
+static char buffer[80];
+
+void decode(char *buf) {
+}
+
+void loop() {
+  if (readline(Serial.read(), buffer, 80) > 0) {
+    decode(buffer);
+    measure();
+  }
 }
