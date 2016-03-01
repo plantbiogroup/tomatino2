@@ -2,6 +2,7 @@
 // Example testing sketch for various DHT humidity/temperature sensors
 // Written by ladyada, public domain
 #include "DHT.h"
+#define RELAYS 2
 
 #define DHTPIN 12     // what digital pin we're connected to
 
@@ -22,36 +23,9 @@
 // tweak the timings for faster processors.  This parameter is no longer needed
 // as the current DHT reading algorithm adjusts itself to work on faster procs.
 DHT dht(DHTPIN, DHTTYPE);
-static int pos = 0;
-static char buffer[80];
-int relays[RELAYS]={3,4,5,6,7,8,9,10};
 
-/******************************************
- ** Serial section
- ******************************************/
-int readline(int readch, char *buffer, int len)
-{
-  int rpos;
-
-  if (readch > 0) {
-    switch (readch) {
-      case '\n': // Newline convention.
-        rpos = pos;
-        pos = 0;  // Reset position index ready for next time
-        return rpos;
-      default:
-	if( readch >= ' ' )	/* is Printable ? */
-	  {
-	    if (pos < len-1) {
-	      buffer[pos++] = readch;
-	      buffer[pos] = 0;
-	    }
-	  }
-    }
-  }
-  // No end of line has been found, so return -1.
-  return -1;
-}
+/* int relays[RELAYS]={3,4,5,6,7,8,9,10}; */
+int relays[RELAYS]={6,7};
 
 void prout_int(char *tag, int value)
 {
@@ -74,6 +48,7 @@ void setup() {
   int pin;
   
   for(pin=0; pin<RELAYS; pin++) {
+    delay(1000);
     pinMode(pin, OUTPUT);
   }
 
@@ -97,32 +72,34 @@ void relay(int num, int state)
   digitalWrite(num, HIGH);
 }
 
-void decode(char *buf) {
-  while( *buf ) {
-    if ( *buf >= 'a' && *buf <= 'h' ) {
-      relay( *buf - 'a', LOW);	/* Relay off */
-    }
-    else if ( *buf >= 'A' && *buf <= 'H' ) {
-      relay( *buf - 'H', HIGH);	/* Relay on */
-    }
-    else if ( *buf == '*' ) {
-      measure();
-    }
-    else if ( *buf == '@' ) {
-      Serial.println("v0.1");
-    }
-    else if ( *buf == '?' ) {
-      Serial.println("a..h, realy off");
-      Serial.println("A..H, realy on");
-      Serial.println("*     return measurements");
-      Serial.println("*       T for temp, H for humidity, C for CO2");
-    }
-    buf++;
+void decode(char  cr) {
+  if ( cr <= ' ' ) {
+    return;
   }
+  else if ( cr >= 'a' && cr <= 'h' ) {
+    relay( cr - 'a', LOW);	/* Relay off */
+  }
+  else if ( cr >= 'A' && cr <= 'H' ) {
+    relay( cr - 'H', HIGH);	/* Relay on */
+  }
+  else if ( cr == '*' ) {
+    measure();
+  }
+  else if ( cr == '@' ) {
+    Serial.println("v0.1");
+  }
+  else if ( cr == '?' ) {
+    Serial.println("a..h, realy off");
+    Serial.println("A..H, realy on");
+    Serial.println("*     return measurements");
+    Serial.println("*       T for temp, H for humidity, C for CO2");
+  }
+  else {
+    Serial.println("Not understood");
+  }
+  Serial.flush();
 }
 
 void loop() {
-  if (readline(Serial.read(), buffer, 80) > 0) {
-    decode(buffer);
-  }
+  decode(Serial.read());
 }
