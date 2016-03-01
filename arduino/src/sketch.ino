@@ -24,6 +24,7 @@
 DHT dht(DHTPIN, DHTTYPE);
 static int pos = 0;
 static char buffer[80];
+int relays[RELAYS]={3,4,5,6,7,8,9,10};
 
 /******************************************
  ** Serial section
@@ -70,6 +71,12 @@ void prout_float(char *tag, float value)
 }
 
 void setup() {
+  int pin;
+  
+  for(pin=0; pin<RELAYS; pin++) {
+    pinMode(pin, OUTPUT);
+  }
+
   dht.begin();
   Serial.begin(9600);
 }
@@ -84,13 +91,19 @@ void measure()
 
 }
 
+void relay(int num, int state)
+{
+  delay(1000);			/* Make certain we don't switch all relays */
+  digitalWrite(num, HIGH);
+}
+
 void decode(char *buf) {
   while( *buf ) {
     if ( *buf >= 'a' && *buf <= 'h' ) {
-      relay( *buf - 'a', 0);	/* Relay off */
+      relay( *buf - 'a', LOW);	/* Relay off */
     }
     else if ( *buf >= 'A' && *buf <= 'H' ) {
-      relay( *buf - 'H', 1);	/* Relay on */
+      relay( *buf - 'H', HIGH);	/* Relay on */
     }
     else if ( *buf == '*' ) {
       measure();
