@@ -2,8 +2,6 @@
 // Example testing sketch for various DHT humidity/temperature sensors
 // Written by ladyada, public domain
 #include "DHT.h"
-#define RELAYS 2
-
 #define DHTPIN 12     // what digital pin we're connected to
 
 // Uncomment whatever type you're using!
@@ -24,8 +22,11 @@
 // as the current DHT reading algorithm adjusts itself to work on faster procs.
 DHT dht(DHTPIN, DHTTYPE);
 
-/* int relays[RELAYS]={3,4,5,6,7,8,9,10}; */
-int relays[RELAYS]={6,7};
+#define RELAYS 6
+unsigned char relays[RELAYS]={4,5,6,7,8,9};
+/* unsigned char relays[RELAYS]={6,7}; */
+/* #define RELAYS 4 */
+/* unsigned char relays[RELAYS]={6,7,8,9}; */
 
 void prout_int(char *tag, int value)
 {
@@ -47,11 +48,6 @@ void prout_float(char *tag, float value)
 void setup() {
   int pin;
   
-  for(pin=0; pin<RELAYS; pin++) {
-    delay(1000);
-    pinMode(pin, OUTPUT);
-  }
-
   dht.begin();
   Serial.begin(9600);
 }
@@ -66,10 +62,20 @@ void measure()
 
 }
 
-void relay(int num, int state)
+void activate(int pin)
 {
-  delay(1000);			/* Make certain we don't switch all relays */
-  digitalWrite(num, HIGH);
+  pinMode(relays[pin], OUTPUT);
+}
+
+
+void relay(unsigned char num, unsigned char state)
+{
+  Serial.print("Setting pin ");
+  Serial.print(num);
+  Serial.print(" to ");
+  Serial.println(state);
+  delay(1000);
+  digitalWrite(relays[num], state);
 }
 
 void decode(char  cr) {
@@ -80,7 +86,10 @@ void decode(char  cr) {
     relay( cr - 'a', LOW);	/* Relay off */
   }
   else if ( cr >= 'A' && cr <= 'H' ) {
-    relay( cr - 'H', HIGH);	/* Relay on */
+    relay( cr - 'A', HIGH);	/* Relay on */
+  }
+  else if ( cr >= '0' && cr <= '9' ) {
+    activate( cr - '0');	/* Relay on */
   }
   else if ( cr == '*' ) {
     measure();
